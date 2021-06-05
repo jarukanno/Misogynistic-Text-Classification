@@ -24,13 +24,13 @@ from nltk.stem.porter import PorterStemmer
 from nltk.corpus import words
 from stop_words import get_stop_words
 from sklearn.model_selection import train_test_split
-from sklearn.naive_bayes import GaussianNB
-from sklearn.naive_bayes import MultinomialNB
+
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score,precision_score, recall_score, f1_score
 from newmm_tokenizer.tokenizer import word_tokenize
 from attacut import tokenize
 from sklearn import svm
+from sklearn import tree
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.metrics import confusion_matrix
 import joblib
@@ -68,82 +68,66 @@ x_train_tf = tf_transformer.transform(count_train)
 x_test_c = count_v.transform(x_test_list)
 x_test_t = tf_transformer.transform(x_test_c)
 
-#naive Bayes
-nb_clf = MultinomialNB()
-nb_clf.fit(x_train_tf, Ytrain_list)
-nb_pred = nb_clf.predict(x_test_t) # store the prediction data
-nb_ac = accuracy_score(y_test_list,nb_pred) # calculate the accuracy
-
-
-#build confusion matrix
-# nb_matrix = confusion_matrix(y_true=y_test_list, y_pred=nb_pred)
-# fig, ax = plt.subplots(figsize=(5, 5))
-# ax.matshow(nb_matrix, cmap=plt.cm.Oranges, alpha=0.3)
-# for i in range(nb_matrix.shape[0]):
-#     for j in range(nb_matrix.shape[1]):
-#         ax.text(x=j, y=i,s=nb_matrix[i, j], va='center', ha='center', size='xx-large')
- 
-# plt.xlabel('Predictions', fontsize=18)
-# plt.ylabel('Actuals', fontsize=18)
-# plt.title('Confusion Matrix of NB', fontsize=18)
-# plt.show()
-
 #svm
 svm_clf = svm.SVC()
 svm_clf.fit(x_train_tf,Ytrain_list)
 svm_pred = svm_clf.predict(x_test_t)
-svm_ac = accuracy_score(y_test_list,svm_pred)
+
 
 
 # #build confusion matrix
-# svm_matrix = confusion_matrix(y_true=y_test_list, y_pred=svm_pred)
-# fig, ax = plt.subplots(figsize=(5, 5))
-# ax.matshow(svm_matrix, cmap=plt.cm.Greens, alpha=0.3)
-# for i in range(svm_matrix.shape[0]):
-#     for j in range(svm_matrix.shape[1]):
-#         ax.text(x=j, y=i,s=svm_matrix[i, j], va='center', ha='center', size='xx-large')
- 
-# plt.xlabel('Predictions', fontsize=18)
-# plt.ylabel('Actuals', fontsize=18)
-# plt.title('Confusion Matrix of SVM', fontsize=18)
-# plt.show()
-# print("accuray score of SVM model is: ",svm_ac)
+svm_matrix = confusion_matrix(y_true=y_test_list, y_pred=svm_pred)
+
 
 #logistic Regrssion
 logisticRegr = LogisticRegression()
 logisticRegr.fit(x_train_tf, Ytrain_list)
 logisticRegr_pred = logisticRegr.predict(x_test_t)
 
-logisticRegr_ac = accuracy_score(y_test_list,logisticRegr_pred)
+#build confusion matrix
+logisticRegr_matrix = confusion_matrix(y_true=y_test_list, y_pred=logisticRegr_pred)
+
+
+# DecisionTree
+dec = tree.DecisionTreeClassifier() # defining decision tree classifier
+dec.fit(x_train_tf, Ytrain_list) # train data on new data and new target
+dec_pred = dec.predict(x_test_t) #  assign removed data as input
 
 #build confusion matrix
-# logisticRegr_matrix = confusion_matrix(y_true=y_test_list, y_pred=logisticRegr_pred)
-# fig, ax = plt.subplots(figsize=(5, 5))
-# ax.matshow(logisticRegr_matrix, cmap=plt.cm.Blues, alpha=0.3)
-# for i in range(logisticRegr_matrix.shape[0]):
-#     for j in range(logisticRegr_matrix.shape[1]):
-#         ax.text(x=j, y=i,s=logisticRegr_matrix[i, j], va='center', ha='center', size='xx-large')
- 
-# plt.xlabel('Predictions', fontsize=18)
-# plt.ylabel('Actuals', fontsize=18)
-# plt.title('Confusion Matrix of Logistic Regression', fontsize=18)
-# plt.show()
-# print("accuray score of Logistic regression is : ",logisticRegr_ac)
+dec_matrix = confusion_matrix(y_true=y_test_list, y_pred=dec_pred )
+
+def show_matrix(model):
+    plt.clf()
+    plt.imshow(model, interpolation='nearest', cmap=plt.cm.Pastel2)
+    classNames = ['Non-Misogynist','Misogynist']
+    plt.title('Confusion Matrix')
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    tick_marks = np.arange(len(classNames))
+    plt.xticks(tick_marks, classNames, rotation=0)
+    plt.yticks(tick_marks, classNames)
+    s = [['TN','FP'], ['FN', 'TP']]
+    for i in range(2):
+        for j in range(2):
+            plt.text(j,i, str(s[i][j])+" = "+str(model[i][j]))
+    plt.show()
+
+def show_score(model_pred):
+    print('Accuracy Score: %.3f' % accuracy_score(y_test, model_pred))
+    print('F1 Score: %.3f' % f1_score(y_test, model_pred))
+    print('Recall: %.3f' % recall_score(y_test, model_pred))
+    print('Precision: %.3f' % precision_score(y_test, model_pred))
+
+# show_score(dec_pred)
+# show_matrix(dec_matrix)
 
 
-joblib.dump(nb_clf, 'model/NB_text_clf.pkl')
 joblib.dump(svm_clf, 'model/SVM_text_clf.pkl')
 joblib.dump(logisticRegr, 'model/logisticRegr_text_clf.pkl')
+joblib.dump(dec, 'model/decision_text_clf.pkl')
 
 
-def getNBScore():
-    return nb_ac
 
-def getSVMScore():
-    return svm_ac
-
-def getlogisticRegrScore():
-    return logisticRegr_ac
 
 def getCountVectorModel():
     return count_v
